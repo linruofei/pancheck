@@ -1,0 +1,26 @@
+services:
+  pancheck:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pancheck
+    ports:
+      - "6080:6080"
+    environment:
+      - SERVER_PORT=6080
+      - SERVER_MODE=release
+      - SERVER_CORS_ORIGINS=*
+      - CHECKER_DEFAULT_CONCURRENCY=5
+      - CHECKER_TIMEOUT=30
+      - MEMORY_HISTORY_TTL_MINUTES=2880
+      - MEMORY_CLEANUP_INTERVAL_MINUTES=10
+      - ADMIN_PASSWORD=admin123
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:6080/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

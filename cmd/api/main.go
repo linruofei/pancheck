@@ -202,6 +202,7 @@ func startMemoryCleanup(memoryConfig config.MemoryConfig) {
 		defer ticker.Stop()
 
 		lastRun := time.Time{}
+		var nextCleanup time.Time
 		for range ticker.C {
 			currentConfig := memoryConfig
 			if config.AppConfig != nil {
@@ -215,15 +216,16 @@ func startMemoryCleanup(memoryConfig config.MemoryConfig) {
 			if interval <= 0 {
 				interval = 10 * time.Minute
 			}
-			if !lastRun.IsZero() && time.Since(lastRun) < interval {
-				continue
-			}
-			lastRun = time.Now()
 
-			deletedInvalid := repository.CleanupInvalidLinks(historyTTL)
-			deletedChecked := cache.CleanupCheckedLinks(historyTTL)
-			if deletedInvalid > 0 || deletedChecked > 0 {
-				log.Printf("Memory cleanup removed %d invalid links and %d checked link cache records", deletedInvalid, deletedChecked)
+			if nextCleanup.IsZero() || time.Now().After(nextCleanup) {
+				lastRun = time.Now()
+				nextCleanup = lastRun.Add(interval).Truncate(time.Minute)
+
+				deletedInvalid := repository.CleanupInvalidLinks(historyTTL)
+				deletedChecked := cache.CleanupCheckedLinks(historyTTL)
+				if deletedInvalid > 0 || deletedChecked > 0 {
+					log.Printf("Memory cleanup removed %d invalid links and %d checked link cache records", deletedInvalid, deletedChecked)
+				}
 			}
 		}
 	}()

@@ -49,8 +49,10 @@ func (h *MemoryHandler) GetOverview(c *gin.Context) {
 	invalidLinks := repository.ListAllInvalidLinks()
 	checkedLinks := cache.ListCheckedLinks()
 
-	now := time.Now()
-	nextCleanup := now.Truncate(time.Minute).Add(time.Duration(memCfg.CleanupIntervalMinutes) * time.Minute)
+	nextCleanup := cache.NextMemoryCleanup
+	if nextCleanup.IsZero() {
+		nextCleanup = time.Now().Add(time.Duration(memCfg.CleanupIntervalMinutes) * time.Minute).Truncate(time.Minute)
+	}
 
 	invalidViews := make([]invalidLinkView, 0, len(invalidLinks))
 	for _, il := range invalidLinks {

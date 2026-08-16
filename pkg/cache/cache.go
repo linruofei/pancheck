@@ -45,6 +45,8 @@ var memoryCacheStore = struct {
 	links: make(map[string]memoryCacheEntry),
 }
 
+var NextMemoryCleanup time.Time
+
 func NewCacheRepository(config CacheConfig) (CacheRepository, error) {
 	return &memoryCacheRepository{enabled: config.Enabled}, nil
 }

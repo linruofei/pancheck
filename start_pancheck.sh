@@ -138,7 +138,7 @@ check_and_update() {
 
     # 如果二进制文件不存在，或者版本号不一致，则触发拉取
     if [ ! -f "./$BIN_NAME" ] || [ ! -d "./static" ] || [ "$remote_ver" != "$local_ver" ]; then
-        echo "[$APP_NAME] 检测到新版本构建: ${remote_ver} (当前本地: ${local_ver:-无})"
+        echo "[$APP_NAME] 检测到新版本构建: ${remote_ver} (当前本地: ${local_ver:-none})"
         echo "[$APP_NAME] 正在从 GitHub 拉取 ${ARCH} 编译产物包: ${TAR_NAME} ..."
 
         # 如果在 git 仓库内，同步最新脚本和配置文件
@@ -255,7 +255,7 @@ restart() {
 # 查看运行状态
 status() {
     if is_running; then
-        local ver="未知"
+        local ver="none"
         if [ -f "$VERSION_FILE" ]; then
             ver=$(head -n 1 "$VERSION_FILE" | tr -d '\r\n[:space:]')
         fi

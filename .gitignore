@@ -7,6 +7,8 @@
 *.test
 *.out
 go.work
+pancheck
+pancheck-*
 
 # IDE
 .idea/
@@ -41,4 +43,6 @@ frontend/.env.*.local
 reference/
 .cursor/
 static/
+.version
+*.pid
 tmp/

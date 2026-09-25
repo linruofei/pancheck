@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"syscall"
 	"time"
 
@@ -69,9 +70,16 @@ func main() {
 	r := gin.Default()
 	r.Use(middleware.CORS(config.AppConfig.Server.CORSOrigins))
 
-	r.Static("/assets", "./static/assets")
-	r.StaticFile("/favicon.ico", "./static/favicon.ico")
-	r.Static("/images", "./static/images")
+	staticDir := "./static"
+	if _, err := os.Stat(staticDir); os.IsNotExist(err) {
+		if _, err := os.Stat("./frontend/dist"); err == nil {
+			staticDir = "./frontend/dist"
+		}
+	}
+
+	r.Static("/assets", filepath.Join(staticDir, "assets"))
+	r.StaticFile("/favicon.ico", filepath.Join(staticDir, "favicon.ico"))
+	r.Static("/images", filepath.Join(staticDir, "images"))
 
 	api := r.Group("/api/v1")
 	{
@@ -99,7 +107,7 @@ func main() {
 			c.JSON(http.StatusNotFound, gin.H{"error": "API endpoint not found"})
 			return
 		}
-		c.File("./static/index.html")
+		c.File(filepath.Join(staticDir, "index.html"))
 	})
 
 	srv := &http.Server{

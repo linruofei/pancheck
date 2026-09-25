@@ -2,6 +2,7 @@ package checker
 
 import (
 	"PanCheck/internal/model"
+	apphttp "PanCheck/pkg/http"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -225,9 +226,7 @@ func getShorturl(surl string) string {
 
 // callShareListAPI 调用/share/list API
 func callShareListAPI(ctx context.Context, apiURL, refererURL, bdclnd string) (*ShareListResponse, error) {
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
+	client := apphttp.GetClient()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", apiURL, nil)
 	if err != nil {
@@ -292,9 +291,7 @@ func verifyPassCode(ctx context.Context, shareURL, shorturl, password string) (s
 		"vcode_str": {""},
 	}
 
-	client := &http.Client{
-		Timeout: 30 * time.Second,
-	}
+	client := apphttp.GetClient()
 
 	req, err := http.NewRequestWithContext(ctx, "POST", apiURL, bytes.NewBufferString(reqBody.Encode()))
 	if err != nil {

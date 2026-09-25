@@ -1,6 +1,7 @@
 package http
 
 import (
+	"crypto/tls"
 	"io"
 	"net/http"
 	"time"
@@ -20,6 +21,9 @@ func GetClient() *http.Client {
 			IdleConnTimeout:     90 * time.Second,
 			DisableCompression:  false,
 			DisableKeepAlives:   false,
+			TLSClientConfig: &tls.Config{
+				MaxVersion: tls.VersionTLS12,
+			},
 		}
 
 		client = &http.Client{

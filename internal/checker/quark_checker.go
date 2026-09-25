@@ -359,7 +359,8 @@ func extractParamsQuark(rawURL string) (resId, pwd string, err error) {
 func followRedirect(ctx context.Context, urlStr string) (string, error) {
 	// 创建一个会跟随重定向的HTTP客户端
 	client := &http.Client{
-		Timeout: 10 * time.Second,
+		Transport: apphttp.GetClient().Transport,
+		Timeout:   10 * time.Second,
 		// 默认会跟随最多10次重定向
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// 如果重定向次数过多，返回错误

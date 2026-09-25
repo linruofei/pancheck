@@ -45,16 +45,15 @@ jobs:
 
       - name: Build Linux AMD64
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o pancheck ./cmd/api
-          chmod +x pancheck
-          tar -czf pancheck-linux-amd64.tar.gz pancheck static/ start_pancheck.sh
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o pancheck-server ./cmd/api
+          chmod +x pancheck-server
+          tar -czf pancheck-linux-amd64.tar.gz pancheck-server static/ start_pancheck.sh
 
       - name: Build Linux ARM64
         run: |
-          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o pancheck-arm64 ./cmd/api
-          chmod +x pancheck-arm64
-          cp pancheck-arm64 pancheck
-          tar -czf pancheck-linux-arm64.tar.gz pancheck static/ start_pancheck.sh
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o pancheck-server ./cmd/api
+          chmod +x pancheck-server
+          tar -czf pancheck-linux-arm64.tar.gz pancheck-server static/ start_pancheck.sh
 
       - name: Generate Version Info
         run: |

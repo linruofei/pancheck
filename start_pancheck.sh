@@ -4,10 +4,29 @@
 cd "$(dirname "$0")" || exit 1
 
 APP_NAME="PanCheck"
-BIN_NAME="pancheck"
+BIN_NAME="pancheck-server"
 PID_FILE="pancheck.pid"
 AUTO_PID_FILE="pancheck_autoupdate.pid"
 VERSION_FILE=".version"
+
+# 自动处理运行目录：如果当前目录下有名为 pancheck 的项目子目录，自动切换进去
+if [ -d "./pancheck" ] && ([ -d "./pancheck/.git" ] || [ -f "./pancheck/go.mod" ]); then
+    echo "[$APP_NAME] 检测到项目子目录 ./pancheck，自动切换至该目录运行..."
+    cd "./pancheck" || exit 1
+fi
+
+# 查找可执行程序
+find_bin() {
+    if [ -f "./$BIN_NAME" ] && [ ! -d "./$BIN_NAME" ]; then
+        echo "./$BIN_NAME"
+    elif [ -f "./pancheck" ] && [ ! -d "./pancheck" ]; then
+        echo "./pancheck"
+    elif [ -f "./main" ] && [ ! -d "./main" ]; then
+        echo "./main"
+    else
+        echo ""
+    fi
+}
 
 # 默认 GitHub 仓库 (优先自动读取当前 Git 远程仓库)
 DEFAULT_REPO="linruofei/pancheck"
@@ -90,7 +109,7 @@ is_running() {
         fi
     fi
     local pgrep_pid
-    pgrep_pid=$(pgrep -f "\./$BIN_NAME" 2>/dev/null | head -n 1)
+    pgrep_pid=$(pgrep -f "(\./$BIN_NAME|\./pancheck\b|\./main)" 2>/dev/null | head -n 1)
     if [ -n "$pgrep_pid" ]; then
         echo "$pgrep_pid" > "$PID_FILE"
         return 0
@@ -98,7 +117,7 @@ is_running() {
     return 1
 }
 
-# 获取远端最新构建版本号 (commit SHA)
+# 获取远端最新构建版本号
 get_remote_version() {
     local ver_url="https://github.com/${REPO}/releases/download/latest/version.txt"
     local tmp_ver="/tmp/pancheck_ver_$$"
@@ -136,8 +155,11 @@ check_and_update() {
         local_ver=$(head -n 1 "$VERSION_FILE" | tr -d '\r\n[:space:]')
     fi
 
+    local current_bin
+    current_bin=$(find_bin)
+
     # 如果二进制文件不存在，或者版本号不一致，则触发拉取
-    if [ ! -f "./$BIN_NAME" ] || [ ! -d "./static" ] || [ "$remote_ver" != "$local_ver" ]; then
+    if [ -z "$current_bin" ] || [ ! -d "./static" ] || [ "$remote_ver" != "$local_ver" ]; then
         echo "[$APP_NAME] 检测到新版本构建: ${remote_ver} (当前本地: ${local_ver:-none})"
         echo "[$APP_NAME] 正在从 GitHub 拉取 ${ARCH} 编译产物包: ${TAR_NAME} ..."
 
@@ -151,10 +173,17 @@ check_and_update() {
 
         if download_file "$download_url" "$tmp_tar"; then
             echo "[$APP_NAME] 下载完成，正在解压更新文件..."
-            tar -xzf "$tmp_tar" -C .
+            if ! tar -xzf "$tmp_tar" -C .; then
+                echo "[$APP_NAME] 解压更新文件失败！"
+                rm -f "$tmp_tar"
+                return 1
+            fi
             rm -f "$tmp_tar"
 
-            chmod +x "./$BIN_NAME" "./start_pancheck.sh" 2>/dev/null || true
+            current_bin=$(find_bin)
+            if [ -n "$current_bin" ]; then
+                chmod +x "$current_bin" "./start_pancheck.sh" 2>/dev/null || true
+            fi
             echo "$remote_ver" > "$VERSION_FILE"
             echo "[$APP_NAME] 成功更新至新版本: ${remote_ver}！"
 
@@ -179,21 +208,26 @@ check_and_update() {
 
 # 启动服务
 start() {
+    local target_bin
+    target_bin=$(find_bin)
+
     # 启动前检查并拉取最新版本（如果不存在可执行文件则强制拉取）
-    if [ ! -f "./$BIN_NAME" ]; then
+    if [ -z "$target_bin" ]; then
         echo "[$APP_NAME] 未检测到可执行程序，尝试从 GitHub 自动拉取最新构建..."
         check_and_update false
+        target_bin=$(find_bin)
     else
-        # 后台检查是否有更新，有则拉取并更新
+        # 检查是否有更新，有则拉取并更新
         check_and_update false
+        target_bin=$(find_bin)
     fi
 
-    if [ ! -f "./$BIN_NAME" ]; then
+    if [ -z "$target_bin" ]; then
         echo "[$APP_NAME] 错误：未找到可执行程序 $BIN_NAME，启动终止！"
         exit 1
     fi
 
-    chmod +x "./$BIN_NAME"
+    chmod +x "$target_bin"
 
     if is_running; then
         echo "[$APP_NAME] 服务已在运行中 (PID: $(cat "$PID_FILE"))"
@@ -201,7 +235,7 @@ start() {
     fi
 
     echo "[$APP_NAME] 正在启动后台服务..."
-    nohup "./$BIN_NAME" >/dev/null 2>&1 < /dev/null &
+    nohup "$target_bin" >/dev/null 2>&1 < /dev/null &
     local pid=$!
     echo "$pid" > "$PID_FILE"
     disown "$pid" 2>/dev/null || true

@@ -138,7 +138,7 @@ check_and_update() {
 
     # 如果二进制文件不存在，或者版本号不一致，则触发拉取
     if [ ! -f "./$BIN_NAME" ] || [ ! -d "./static" ] || [ "$remote_ver" != "$local_ver" ]; then
-        echo "[$APP_NAME] 检测到新版本构建: ${remote_ver:0:8} (当前本地: ${local_ver:0:8:-})"
+        echo "[$APP_NAME] 检测到新版本构建: ${remote_ver} (当前本地: ${local_ver:-无})"
         echo "[$APP_NAME] 正在从 GitHub 拉取 ${ARCH} 编译产物包: ${TAR_NAME} ..."
 
         # 如果在 git 仓库内，同步最新脚本和配置文件
@@ -156,7 +156,7 @@ check_and_update() {
 
             chmod +x "./$BIN_NAME" "./start_pancheck.sh" 2>/dev/null || true
             echo "$remote_ver" > "$VERSION_FILE"
-            echo "[$APP_NAME] 成功更新至新版本: ${remote_ver:0:8}！"
+            echo "[$APP_NAME] 成功更新至新版本: ${remote_ver}！"
 
             # 如果服务原本在运行，则重启
             if is_running; then
@@ -171,7 +171,7 @@ check_and_update() {
         fi
     else
         if [ "$silent" != "true" ]; then
-            echo "[$APP_NAME] 当前已是最新版本 (${local_ver:0:8})"
+            echo "[$APP_NAME] 当前已是最新版本 (${local_ver})"
         fi
         return 0
     fi
@@ -257,7 +257,7 @@ status() {
     if is_running; then
         local ver="未知"
         if [ -f "$VERSION_FILE" ]; then
-            ver=$(head -n 1 "$VERSION_FILE" | cut -c1-8)
+            ver=$(head -n 1 "$VERSION_FILE" | tr -d '\r\n[:space:]')
         fi
         echo "[$APP_NAME] 状态: 运行中"
         echo "  - 进程 PID: $(cat "$PID_FILE")"

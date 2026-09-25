@@ -58,7 +58,9 @@ jobs:
 
       - name: Generate Version Info
         run: |
-          echo "${{ github.sha }}" > version.txt
+          VERSION="v$(TZ='Asia/Shanghai' date +'%Y%m%d-%H%M')"
+          echo "$VERSION" > version.txt
+          echo "BUILD_VERSION=$VERSION" >> $GITHUB_ENV
 
       - name: Publish Latest Release
         env:
@@ -75,8 +77,8 @@ jobs:
             pancheck-linux-amd64.tar.gz \
             pancheck-linux-arm64.tar.gz \
             version.txt \
-            --title "PanCheck 最新构建" \
-            --notes "由 GitHub Actions 自动编译自 Commit: ${{ github.sha }} ($(date -u +'%Y-%m-%d %H:%M:%S UTC'))"
+            --title "PanCheck 最新构建 (${{ env.BUILD_VERSION }})" \
+            --notes "由 GitHub Actions 自动编译于: $(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S (北京时间)') | Commit: ${{ github.sha }}"
 
           # 如果带有版本标签 (如 v1.0.0)，同时发布独立版本
           if [[ "${{ github.ref }}" == refs/tags/* ]]; then

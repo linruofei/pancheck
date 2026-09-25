@@ -99,6 +99,10 @@ func main() {
 			apiAuth.PUT("/settings/:key", settingsHandler.UpdateSetting)
 
 			apiAuth.GET("/memory/overview", memoryHandler.GetOverview)
+			apiAuth.DELETE("/memory/invalid-link", memoryHandler.DeleteInvalidLink)
+			apiAuth.POST("/memory/invalid-link/delete", memoryHandler.DeleteInvalidLink)
+			apiAuth.DELETE("/memory/checked-link", memoryHandler.DeleteCheckedLink)
+			apiAuth.POST("/memory/checked-link/delete", memoryHandler.DeleteCheckedLink)
 		}
 	}
 

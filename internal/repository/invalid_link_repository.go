@@ -1,4 +1,4 @@
-﻿package repository
+package repository
 
 import (
 	"crypto/sha1"
@@ -114,4 +114,16 @@ func ListAllInvalidLinks() []model.InvalidLink {
 		entries = append(entries, invalidLink)
 	}
 	return entries
+}
+
+func DeleteInvalidLink(link string) bool {
+	invalidLinkMemoryStore.Lock()
+	defer invalidLinkMemoryStore.Unlock()
+
+	key := linkHash(link)
+	if _, ok := invalidLinkMemoryStore.links[key]; ok {
+		delete(invalidLinkMemoryStore.links, key)
+		return true
+	}
+	return false
 }

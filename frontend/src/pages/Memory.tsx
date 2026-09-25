@@ -1,8 +1,10 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '@/api/authApi';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { Trash2 } from 'lucide-react';
 import { PLATFORM_NAMES } from '@/utils/constants';
 
 interface MemoryOverview {
@@ -44,6 +46,7 @@ function formatTime(t: string): string {
 export function Memory() {
   const [data, setData] = useState<MemoryData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingLink, setDeletingLink] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
@@ -54,6 +57,58 @@ export function Memory() {
       toast.error('加载内存数据失败: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteInvalidLink = async (link: string) => {
+    try {
+      setDeletingLink(link);
+      await api.delete('/memory/invalid-link', {
+        params: { link },
+        data: { link },
+      });
+      toast.success('已删除失效链接');
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          overview: {
+            ...prev.overview,
+            invalid_links_total: Math.max(0, prev.overview.invalid_links_total - 1),
+          },
+          invalid_links: prev.invalid_links.filter((item) => item.link !== link),
+        };
+      });
+    } catch (err: any) {
+      toast.error('删除失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setDeletingLink(null);
+    }
+  };
+
+  const handleDeleteCheckedLink = async (link: string) => {
+    try {
+      setDeletingLink(link);
+      await api.delete('/memory/checked-link', {
+        params: { link },
+        data: { link },
+      });
+      toast.success('已删除检测缓存');
+      setData((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          overview: {
+            ...prev.overview,
+            checked_links_total: Math.max(0, prev.overview.checked_links_total - 1),
+          },
+          checked_links: prev.checked_links.filter((item) => item.link !== link),
+        };
+      });
+    } catch (err: any) {
+      toast.error('删除失败: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setDeletingLink(null);
     }
   };
 
@@ -131,23 +186,36 @@ export function Memory() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[360px]">链接</TableHead>
+                  <TableHead className="w-[320px]">链接</TableHead>
                   <TableHead>平台</TableHead>
                   <TableHead>原因</TableHead>
                   <TableHead>是否限流</TableHead>
                   <TableHead>查询时间</TableHead>
                   <TableHead>清理时间</TableHead>
+                  <TableHead className="w-[80px] text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.invalid_links.map((item, i) => (
                   <TableRow key={i}>
-                    <TableCell className="max-w-[360px] truncate">{item.link}</TableCell>
+                    <TableCell className="max-w-[320px] truncate" title={item.link}>{item.link}</TableCell>
                     <TableCell>{PLATFORM_NAMES[item.platform] || item.platform}</TableCell>
-                    <TableCell className="max-w-[200px] truncate">{item.failure_reason || '-'}</TableCell>
+                    <TableCell className="max-w-[200px] truncate" title={item.failure_reason}>{item.failure_reason || '-'}</TableCell>
                     <TableCell>{item.is_rate_limited ? '是' : '否'}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{formatTime(item.query_time)}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{formatTime(item.cleanup_at)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteInvalidLink(item.link)}
+                        disabled={deletingLink === item.link}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        {deletingLink === item.link ? '删除中' : '删除'}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -170,19 +238,32 @@ export function Memory() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[400px]">链接</TableHead>
+                  <TableHead className="w-[380px]">链接</TableHead>
                   <TableHead>是否有效</TableHead>
                   <TableHead>查询时间</TableHead>
                   <TableHead>清理时间</TableHead>
+                  <TableHead className="w-[80px] text-right">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {data.checked_links.map((item, i) => (
                   <TableRow key={i}>
-                    <TableCell className="max-w-[400px] truncate">{item.link}</TableCell>
+                    <TableCell className="max-w-[380px] truncate" title={item.link}>{item.link}</TableCell>
                     <TableCell>{item.valid ? '是' : '否'}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{formatTime(item.query_time)}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{formatTime(item.cleanup_at)}</TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+                        onClick={() => handleDeleteCheckedLink(item.link)}
+                        disabled={deletingLink === item.link}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 mr-1" />
+                        {deletingLink === item.link ? '删除中' : '删除'}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

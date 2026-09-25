@@ -95,3 +95,33 @@ func (h *MemoryHandler) GetOverview(c *gin.Context) {
 		},
 	})
 }
+
+type deleteLinkRequest struct {
+	Link string `json:"link" form:"link"`
+}
+
+func (h *MemoryHandler) DeleteInvalidLink(c *gin.Context) {
+	var req deleteLinkRequest
+	if err := c.ShouldBind(&req); err != nil || req.Link == "" {
+		req.Link = c.Query("link")
+	}
+	if req.Link == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "link is required"})
+		return
+	}
+	deleted := repository.DeleteInvalidLink(req.Link)
+	c.JSON(http.StatusOK, gin.H{"message": "deleted", "success": deleted})
+}
+
+func (h *MemoryHandler) DeleteCheckedLink(c *gin.Context) {
+	var req deleteLinkRequest
+	if err := c.ShouldBind(&req); err != nil || req.Link == "" {
+		req.Link = c.Query("link")
+	}
+	if req.Link == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "link is required"})
+		return
+	}
+	deleted := cache.DeleteCheckedLink(req.Link)
+	c.JSON(http.StatusOK, gin.H{"message": "deleted", "success": deleted})
+}

@@ -162,3 +162,15 @@ func ListCheckedLinks() []CachedLinkEntry {
 	}
 	return entries
 }
+
+func DeleteCheckedLink(link string) bool {
+	memoryCacheStore.Lock()
+	defer memoryCacheStore.Unlock()
+
+	key := cacheKey(link)
+	if _, ok := memoryCacheStore.links[key]; ok {
+		delete(memoryCacheStore.links, key)
+		return true
+	}
+	return false
+}

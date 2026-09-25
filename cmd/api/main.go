@@ -1,4 +1,4 @@
-﻿package main
+package main
 
 import (
 	"context"
@@ -198,18 +198,37 @@ func initCheckers(factory *checker.CheckerFactory, checkerConfig config.CheckerC
 
 func startMemoryCleanup(memoryConfig config.MemoryConfig) {
 	go func() {
+		currentConfig := memoryConfig
+		if config.AppConfig != nil {
+			currentConfig = config.AppConfig.Memory
+		}
+		historyTTL := time.Duration(currentConfig.HistoryTTLMinutes) * time.Minute
+		interval := time.Duration(currentConfig.CleanupIntervalMinutes) * time.Minute
+		if historyTTL <= 0 {
+			historyTTL = 48 * time.Hour
+		}
+		if interval <= 0 {
+			interval = 10 * time.Minute
+		}
+
+		// Initial cleanup on startup
+		deletedInvalid := repository.CleanupInvalidLinks(historyTTL)
+		deletedChecked := cache.CleanupCheckedLinks(historyTTL)
+		if deletedInvalid > 0 || deletedChecked > 0 {
+			log.Printf("Memory cleanup removed %d invalid links and %d checked link cache records", deletedInvalid, deletedChecked)
+		}
+		cache.SetNextMemoryCleanup(time.Now().Add(interval).Truncate(time.Minute))
+
 		ticker := time.NewTicker(time.Minute)
 		defer ticker.Stop()
 
-		lastRun := time.Time{}
-		var nextCleanup time.Time
 		for range ticker.C {
 			currentConfig := memoryConfig
 			if config.AppConfig != nil {
 				currentConfig = config.AppConfig.Memory
 			}
-			historyTTL := time.Duration(currentConfig.HistoryTTLMinutes) * time.Minute
-			interval := time.Duration(currentConfig.CleanupIntervalMinutes) * time.Minute
+			historyTTL = time.Duration(currentConfig.HistoryTTLMinutes) * time.Minute
+			interval = time.Duration(currentConfig.CleanupIntervalMinutes) * time.Minute
 			if historyTTL <= 0 {
 				historyTTL = 48 * time.Hour
 			}
@@ -217,15 +236,17 @@ func startMemoryCleanup(memoryConfig config.MemoryConfig) {
 				interval = 10 * time.Minute
 			}
 
+			nextCleanup := cache.GetNextMemoryCleanup()
 			if nextCleanup.IsZero() || time.Now().After(nextCleanup) {
-				lastRun = time.Now()
-				nextCleanup = lastRun.Add(interval).Truncate(time.Minute)
+				cache.SetNextMemoryCleanup(time.Now().Add(interval).Truncate(time.Minute))
 
 				deletedInvalid := repository.CleanupInvalidLinks(historyTTL)
 				deletedChecked := cache.CleanupCheckedLinks(historyTTL)
 				if deletedInvalid > 0 || deletedChecked > 0 {
 					log.Printf("Memory cleanup removed %d invalid links and %d checked link cache records", deletedInvalid, deletedChecked)
 				}
+			} else if nextCleanup.After(time.Now().Add(interval)) {
+				cache.SetNextMemoryCleanup(time.Now().Add(interval).Truncate(time.Minute))
 			}
 		}
 	}()

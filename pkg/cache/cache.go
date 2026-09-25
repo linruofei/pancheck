@@ -1,4 +1,4 @@
-﻿package cache
+package cache
 
 import (
 	"context"
@@ -45,7 +45,22 @@ var memoryCacheStore = struct {
 	links: make(map[string]memoryCacheEntry),
 }
 
-var NextMemoryCleanup time.Time
+var (
+	cleanupMu         sync.RWMutex
+	NextMemoryCleanup time.Time
+)
+
+func SetNextMemoryCleanup(t time.Time) {
+	cleanupMu.Lock()
+	defer cleanupMu.Unlock()
+	NextMemoryCleanup = t
+}
+
+func GetNextMemoryCleanup() time.Time {
+	cleanupMu.RLock()
+	defer cleanupMu.RUnlock()
+	return NextMemoryCleanup
+}
 
 func NewCacheRepository(config CacheConfig) (CacheRepository, error) {
 	return &memoryCacheRepository{enabled: config.Enabled}, nil

@@ -1,4 +1,4 @@
-﻿package handler
+package handler
 
 import (
 	"net/http"
@@ -49,7 +49,7 @@ func (h *MemoryHandler) GetOverview(c *gin.Context) {
 	invalidLinks := repository.ListAllInvalidLinks()
 	checkedLinks := cache.ListCheckedLinks()
 
-	nextCleanup := cache.NextMemoryCleanup
+	nextCleanup := cache.GetNextMemoryCleanup()
 	if nextCleanup.IsZero() {
 		nextCleanup = time.Now().Add(time.Duration(memCfg.CleanupIntervalMinutes) * time.Minute).Truncate(time.Minute)
 	}
